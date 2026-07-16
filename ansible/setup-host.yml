@@ -1,0 +1,79 @@
+---
+- name: Configure EC2 host with Jenkins, kubectl, kind, and Helm
+  hosts: ec2_host
+  become: true
+  vars:
+    kubectl_version: "v1.30.0"
+    kind_version: "v0.23.0"
+    helm_version: "v3.15.0"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+
+    - name: Install base packages
+      apt:
+        name: ["curl", "git", "unzip", "apt-transport-https", "ca-certificates", "gnupg"]
+        state: present
+
+    # ---------- Jenkins (runs as a Docker container since Docker is already installed) ----------
+    - name: Create Jenkins data directory
+      file:
+        path: /opt/jenkins_home
+        state: directory
+        mode: "0777"
+
+    - name: Run Jenkins container
+      community.docker.docker_container:
+        name: jenkins
+        image: jenkins/jenkins:lts-jdk17
+        state: started
+        restart_policy: always
+        ports:
+          - "8080:8080"
+          - "50000:50000"
+        volumes:
+          - /opt/jenkins_home:/var/jenkins_home
+          - /var/run/docker.sock:/var/run/docker.sock
+        user: root
+
+    # ---------- kubectl ----------
+    - name: Download kubectl
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+    # ---------- kind (Kubernetes-in-Docker, gives us a multi-node cluster on one EC2) ----------
+    - name: Download kind
+      get_url:
+        url: "https://kind.sigs.k8s.io/dl/{{ kind_version }}/kind-linux-amd64"
+        dest: /usr/local/bin/kind
+        mode: "0755"
+
+    # ---------- Helm ----------
+    - name: Download and install Helm
+      unarchive:
+        src: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+        dest: /tmp
+        remote_src: true
+      args:
+        creates: /tmp/linux-amd64/helm
+
+    - name: Move helm binary into place
+      copy:
+        src: /tmp/linux-amd64/helm
+        dest: /usr/local/bin/helm
+        mode: "0755"
+        remote_src: true
+
+    - name: Verify installed tool versions
+      shell: |
+        echo "--- kubectl ---" && kubectl version --client
+        echo "--- kind ---" && kind version
+        echo "--- helm ---" && helm version
+      register: tool_versions
+
+    - debug:
+        var: tool_versions.stdout_lines

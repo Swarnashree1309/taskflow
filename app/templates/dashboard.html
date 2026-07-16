@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-4">Welcome back, {{ username }} 👋</h2>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center shadow-sm border-0 bg-primary text-white">
+      <div class="card-body">
+        <h6>Total Tasks</h6>
+        <h2 id="stat-total">-</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center shadow-sm border-0 bg-warning">
+      <div class="card-body">
+        <h6>Pending</h6>
+        <h2 id="stat-pending">-</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center shadow-sm border-0 bg-info text-white">
+      <div class="card-body">
+        <h6>In Progress</h6>
+        <h2 id="stat-progress">-</h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center shadow-sm border-0 bg-success text-white">
+      <div class="card-body">
+        <h6>Done</h6>
+        <h2 id="stat-done">-</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5>Task Status Breakdown</h5>
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5>Quick Actions</h5>
+        <a href="{{ url_for('main.tasks_page') }}" class="btn btn-primary mt-2">
+          <i class="bi bi-plus-circle"></i> Manage Tasks
+        </a>
+        <p class="text-muted mt-3">High priority open items: <span id="stat-high">-</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('/api/stats').then(r => r.json()).then(data => {
+  document.getElementById('stat-total').innerText = data.total;
+  document.getElementById('stat-pending').innerText = data.pending;
+  document.getElementById('stat-progress').innerText = data.in_progress;
+  document.getElementById('stat-done').innerText = data.done;
+  document.getElementById('stat-high').innerText = data.high_priority;
+
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pending', 'In Progress', 'Done'],
+      datasets: [{
+        data: [data.pending, data.in_progress, data.done],
+        backgroundColor: ['#ffc107', '#0dcaf0', '#198754']
+      }]
+    }
+  });
+});
+</script>
+{% endblock %}

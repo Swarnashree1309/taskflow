@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskflow-web
+  namespace: taskflow
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: taskflow-web }
+  template:
+    metadata:
+      labels: { app: taskflow-web }
+    spec:
+      containers:
+        - name: taskflow-web
+          image: <your-dockerhub-username>/taskflow:latest
+          ports: [{ containerPort: 5000 }]
+          envFrom:
+            - secretRef: { name: taskflow-secret }
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "300m", memory: "256Mi" }
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskflow-service
+  namespace: taskflow
+spec:
+  selector: { app: taskflow-web }
+  ports: [{ port: 80, targetPort: 5000 }]
+  type: ClusterIP
