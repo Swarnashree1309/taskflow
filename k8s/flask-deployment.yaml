@@ -4,7 +4,7 @@ metadata:
   name: taskflow-web
   namespace: taskflow
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels: { app: taskflow-web }
   template:
@@ -13,13 +13,13 @@ spec:
     spec:
       containers:
         - name: taskflow-web
-          image: <your-dockerhub-username>/taskflow:latest
+          image: swarnashreeds/taskflow:latest
           ports: [{ containerPort: 5000 }]
           envFrom:
             - secretRef: { name: taskflow-secret }
           resources:
-            requests: { cpu: "100m", memory: "128Mi" }
-            limits: { cpu: "300m", memory: "256Mi" }
+            requests: { cpu: "50m", memory: "100Mi" }
+            limits:   { cpu: "150m", memory: "200Mi" }
           readinessProbe:
             httpGet: { path: /health, port: 5000 }
             initialDelaySeconds: 5
@@ -34,5 +34,8 @@ metadata:
   namespace: taskflow
 spec:
   selector: { app: taskflow-web }
-  ports: [{ port: 80, targetPort: 5000 }]
-  type: ClusterIP
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30080
